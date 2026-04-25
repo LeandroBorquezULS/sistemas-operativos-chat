@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from tkinter import ttk
 
 from client.config import DARK_THEME, LIGHT_THEME
-from shared.protocol import DEFAULT_EMOJIS, MAX_MESSAGE_LENGTH, PALETTE, parse_timestamp
+from shared.protocol import COLOR_OPTIONS, DEFAULT_EMOJIS, MAX_MESSAGE_LENGTH, PALETTE_NAMES, parse_timestamp, timestamp_to_local_text
 
 
 class ToolTip:
@@ -48,6 +48,9 @@ class MessageGroup:
     user_id: str | None
     timestamp: str
     frame: tk.Frame
+    header: tk.Frame
+    name_label: tk.Label
+    time_label: tk.Label
     body: tk.Frame
 
 
@@ -70,14 +73,14 @@ class LoginView:
 
         self.name_var = tk.StringVar()
         self.emoji_var = tk.StringVar(value=DEFAULT_EMOJIS[0])
-        self.color_var = tk.StringVar(value=PALETTE[0])
+        self.color_var = tk.StringVar(value=PALETTE_NAMES[0])
         self.host_var = tk.StringVar(value="127.0.0.1")
         self.port_var = tk.StringVar(value="9999")
         self.status_var = tk.StringVar(value="Completa tus datos para entrar.")
 
         self._build_field("Nombre", self.name_var)
         self._build_field("Emoji/Icono", self.emoji_var)
-        self._build_select("Color", self.color_var, PALETTE)
+        self._build_color_select()
         self._build_field("IP / Host", self.host_var)
         self._build_field("Puerto", self.port_var)
 
@@ -122,6 +125,31 @@ class LoginView:
         ttk.Combobox(self.frame, textvariable=variable, values=values, state="readonly", width=31).pack(
             anchor="w", pady=(0, 12)
         )
+
+    def _build_color_select(self) -> None:
+        tk.Label(
+            self.frame,
+            text="Color",
+            bg=LIGHT_THEME["window_bg"],
+            fg=LIGHT_THEME["text"],
+        ).pack(anchor="w")
+        row = tk.Frame(self.frame, bg=LIGHT_THEME["window_bg"])
+        row.pack(anchor="w", pady=(0, 12))
+        ttk.Combobox(row, textvariable=self.color_var, values=PALETTE_NAMES, state="readonly", width=22).pack(
+            side="left"
+        )
+        self.color_preview = tk.Label(row, width=3, height=1, relief="solid", borderwidth=1)
+        self.color_preview.pack(side="left", padx=(8, 8))
+        self.color_preview_name = tk.Label(row, bg=LIGHT_THEME["window_bg"], fg=LIGHT_THEME["muted"])
+        self.color_preview_name.pack(side="left")
+        self.color_var.trace_add("write", self._update_color_preview)
+        self._update_color_preview()
+
+    def _update_color_preview(self, *_args) -> None:
+        selected_name = self.color_var.get()
+        selected_color = dict(COLOR_OPTIONS).get(selected_name, COLOR_OPTIONS[0][1])
+        self.color_preview.configure(bg=selected_color)
+        self.color_preview_name.configure(text=selected_name)
 
     def submit(self) -> None:
         self.on_connect(
@@ -172,6 +200,15 @@ class ChatView:
         self.profile_box = tk.Frame(self.sidebar, padx=12, pady=12)
         self.profile_box.pack(fill="x", padx=10, pady=10)
 
+        self.profile_header = tk.Frame(self.profile_box)
+        self.profile_header.pack(fill="x", pady=(0, 8))
+
+        self.profile_color_chip = tk.Label(self.profile_header, width=2, height=1, relief="solid", borderwidth=1)
+        self.profile_color_chip.pack(side="left", padx=(0, 8))
+
+        self.profile_name_label = tk.Label(self.profile_header, justify="left", anchor="w", font=("TkDefaultFont", 11, "bold"))
+        self.profile_name_label.pack(side="left", fill="x", expand=True)
+
         self.profile_label = tk.Label(self.profile_box, justify="left", anchor="w")
         self.profile_label.pack(fill="x", pady=(0, 10))
 
@@ -220,6 +257,9 @@ class ChatView:
         self.users_title.configure(bg=theme["sidebar_bg"], fg=theme["text"])
         self.users_list.configure(bg=theme["sidebar_bg"])
         self.profile_box.configure(bg=theme["system_bg"], highlightbackground=theme["border"], highlightthickness=1)
+        self.profile_header.configure(bg=theme["system_bg"])
+        self.profile_color_chip.configure(bg=getattr(self.profile_color_chip, "_color_value", theme["input_bg"]))
+        self.profile_name_label.configure(bg=theme["system_bg"], fg=getattr(self.profile_name_label, "_name_fg", theme["text"]))
         self.profile_label.configure(bg=theme["system_bg"], fg=theme["text"])
         self.chat_canvas.configure(bg=theme["chat_bg"])
         self.chat_frame.configure(bg=theme["chat_bg"])
@@ -261,8 +301,12 @@ class ChatView:
         self.message_var.set("")
 
     def set_profile(self, user: dict, host: str) -> None:
+        self.profile_color_chip._color_value = user["color"]
+        self.profile_name_label._name_fg = user["color"]
+        self.profile_color_chip.configure(bg=user["color"])
+        self.profile_name_label.configure(text=f"{user['emoji']} {user['name']}", fg=user["color"])
         self.profile_label.configure(
-            text=f"{user['emoji']} {user['name']}\nIP/Host: {host}\nColor: {user['color']}"
+            text=f"IP/Host: {host}\nID: {user['id']}"
         )
 
     def set_users(self, users: list[dict]) -> None:
@@ -312,17 +356,34 @@ class ChatView:
         else:
             frame = tk.Frame(self.chat_frame, padx=10, pady=8)
             frame.pack(fill="x", padx=12, pady=2, anchor="w")
-            header = tk.Label(
-                frame,
-                text=f"{user['emoji']} {user['name']}  {user['color']}",
+            header = tk.Frame(frame)
+            header.pack(fill="x", anchor="w")
+            name_label = tk.Label(
+                header,
+                text=f"{user['emoji']} {user['name']}",
                 anchor="w",
                 fg=user["color"],
                 font=("TkDefaultFont", 10, "bold"),
             )
-            header.pack(anchor="w")
+            name_label.pack(side="left")
+            time_label = tk.Label(
+                header,
+                text=timestamp_to_local_text(timestamp),
+                anchor="w",
+                font=("TkDefaultFont", 9),
+            )
+            time_label.pack(side="left", padx=(8, 0))
             body = tk.Frame(frame)
             body.pack(fill="x", anchor="w", pady=(4, 0))
-            group = MessageGroup(user_id=user["id"], timestamp=timestamp, frame=frame, body=body)
+            group = MessageGroup(
+                user_id=user["id"],
+                timestamp=timestamp,
+                frame=frame,
+                header=header,
+                name_label=name_label,
+                time_label=time_label,
+                body=body,
+            )
             self.message_groups.append(group)
         bubble = tk.Label(
             group.body,
@@ -341,11 +402,10 @@ class ChatView:
     def _restyle_group(self, group: MessageGroup) -> None:
         theme = self.theme
         group.frame.configure(bg=theme["chat_bg"])
+        group.header.configure(bg=theme["chat_bg"])
+        group.name_label.configure(bg=theme["chat_bg"])
+        group.time_label.configure(bg=theme["chat_bg"], fg=theme["muted"])
         group.body.configure(bg=theme["chat_bg"])
-        for child in group.frame.winfo_children():
-            if child is group.body:
-                continue
-            child.configure(bg=theme["chat_bg"])
         for bubble in group.body.winfo_children():
             bubble.configure(
                 bg=theme["input_bg"],

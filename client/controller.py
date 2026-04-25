@@ -5,7 +5,7 @@ from tkinter import messagebox
 
 from client.network import ChatConnection
 from client.views import ChatView, LoginView
-from shared.protocol import DEFAULT_PORT, MAX_MESSAGE_LENGTH, sanitize_color, sanitize_emoji, sanitize_message, sanitize_name
+from shared.protocol import DEFAULT_PORT, MAX_MESSAGE_LENGTH, is_valid_emoji, sanitize_color, sanitize_emoji, sanitize_message, sanitize_name
 
 
 class ChatController:
@@ -29,7 +29,11 @@ class ChatController:
 
     def connect(self, form: dict) -> None:
         name = sanitize_name(form["name"])
-        emoji = sanitize_emoji(form["emoji"])
+        raw_emoji = form["emoji"].strip()
+        if raw_emoji and not is_valid_emoji(raw_emoji):
+            self.login_view.set_status("Ingresa un emoji valido o deja el campo vacio para usar uno aleatorio.", is_error=True)
+            return
+        emoji = sanitize_emoji(raw_emoji)
         color = sanitize_color(form["color"])
         host = form["host"] or "127.0.0.1"
         try:
