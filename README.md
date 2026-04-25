@@ -42,7 +42,3 @@ python3 socket_cliente_3.py
 ## Nota sobre Tkinter
 
 El cliente usa Tkinter. Si tu sistema no tiene instaladas las librerias graficas de Tk, debes instalarlas antes de ejecutar la interfaz.
-
-## Pruebas fuera de la red local
-
-Si quieres usar un tunel como Cloudflare Tunnel para pruebas externas, no hace falta cambiar el protocolo del chat. Solo necesitas exponer el puerto TCP del servidor y luego usar en el cliente la direccion y puerto publicados por el tunel.
