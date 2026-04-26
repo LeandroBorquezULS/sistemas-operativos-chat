@@ -2,8 +2,8 @@
 
 Este proyecto contiene:
 
-- `socket_servidor_3.py`: inicia el servidor del chat.
-- `socket_cliente_3.py`: inicia el cliente con interfaz en Tkinter.
+- `socket_servidor.py`: inicia el servidor del chat.
+- `socket_cliente.py`: inicia el cliente con interfaz en Tkinter.
 
 ## Caracteristicas
 
@@ -22,13 +22,13 @@ Este proyecto contiene:
 1. Inicia el servidor:
 
 ```bash
-python3 socket_servidor_3.py
+python3 socket_servidor.py
 ```
 
 2. Inicia uno o mas clientes:
 
 ```bash
-python3 socket_cliente_3.py
+python3 socket_cliente.py
 ```
 
 3. En el login del cliente indica:
@@ -38,7 +38,3 @@ python3 socket_cliente_3.py
 - Color
 - IP o host del servidor
 - Puerto
-
-## Nota sobre Tkinter
-
-El cliente usa Tkinter. Si tu sistema no tiene instaladas las librerias graficas de Tk, debes instalarlas antes de ejecutar la interfaz.
